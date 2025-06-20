@@ -3,7 +3,18 @@ const { poolPromise,sql } = require('../../db');
 
 // Deliveryman Controller
 exports.createDeliveryman = async (req, res) => {
-    const { user_Name, mobile_Number, email_ID, alternativeNumber, city, address, company_Id } = req.body;
+   // const { user_Name, mobile_Number, email_ID, alternativeNumber, city, address, company_Id } = req.body;
+  
+    const delivermanData=req.body;
+      console.log("delivermanData",delivermanData);
+      
+    const user_Name=delivermanData.user_Name || delivermanData.name;
+    const mobile_Number=delivermanData.mobile_Number || delivermanData.mobile;
+    const email_ID=delivermanData.email_ID || delivermanData.email;
+    const alternativeNumber=delivermanData.alternativeNumber || delivermanData.alternativePhone;
+    const city=delivermanData.city ;
+    const address=delivermanData.address;
+    const company_Id=delivermanData.company_Id || 1;
 
     try {
         // Generate user code

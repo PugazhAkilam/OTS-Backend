@@ -4,14 +4,16 @@ const adminModel = require('../../models/superadmin/adminModel');
 
 // Create Admin
 const createAdmin = async (req, res) => {
-  const { username, usercode,  companyName, mobileId, email } = req.body;
+  const { username,   companyName, mobileId, email,name,mobile,role } = req.body;
+    
+  console.log('Received data:', req.body); // Log the received data
 
   try {
     // Insert company details and get company_Id
-    const company_Id = await adminModel.addCompany(companyName, email, mobileId);
-
+    const company_Id = await adminModel.addCompany(companyName, email, mobileId,mobile);
+     
     // Insert user details with the company_Id
-    await adminModel.addUser(username, usercode,  company_Id,mobileId,email);
+    await adminModel.addUser(username,  company_Id,mobileId,email,name,role,mobile);
 
     // Success response
     res.status(200).json({ message: 'Admin created successfully',company_Id });
@@ -21,6 +23,15 @@ const createAdmin = async (req, res) => {
   }
 };
 
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await adminModel.getAllUsers();
+    res.status(200).json(users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+};
 const updateCompanySettings = async (req, res) => {
   try {
     const companyId = 1;
@@ -128,14 +139,67 @@ const deleteMenuAccess = async (req, res) => {
     }
 };
 
+// ... existing code ...
 
-// Update the exports section
-module.exports = { 
-  createAdmin, 
-  updateCompanySettings, 
+const updateUserStatus = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { isActive } = req.body;
+    
+     console.log(userId,isActive);
+     
+    await adminModel.updateUserStatus(userId, isActive);
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'User status updated successfully' 
+    });
+  } catch (error) {
+    console.error('Error updating user status:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to update user status' 
+    });
+  }
+};
+
+const updateUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { user_Name, email_ID, mobile_Number, alter_Mobile_number } = req.body;
+    
+    await adminModel.updateUser(userId, {
+      user_Name,
+      email_ID,
+      mobile_Number,
+      alter_Mobile_number
+    });
+    
+    res.status(200).json({ 
+      success: true, 
+      message: 'User updated successfully' 
+    });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to update user' 
+    });
+  }
+};
+
+
+
+// Update the exports
+module.exports = {
+  createAdmin,
+  getAllUsers,
+  updateCompanySettings,
   getCompanySettings,
   createMenuAccess,
   getMenuAccess,
   updateMenuAccess,
-  deleteMenuAccess
+  deleteMenuAccess,
+  updateUser,
+  updateUserStatus
 };

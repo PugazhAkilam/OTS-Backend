@@ -1,14 +1,116 @@
 // models/adminModel.js
 const { sql, poolPromise } = require('../../db');
 
+const generateUniqueUserCode = async (prefix = 'USER') => {
+  const pool = await poolPromise;
+  let isUnique = false;
+  let userCode;
+  
+  while (!isUnique) {
+    // Generate a random 4-digit number
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    userCode = `${prefix}${randomNum}`;
+    
+    // Check if the code exists
+    const result = await pool.request()
+      .input('userCode', sql.VarChar, userCode)
+      .query('SELECT COUNT(*) as count FROM user_Master WHERE user_Code = @userCode');
+    
+    isUnique = result.recordset[0].count === 0;
+  }
+  
+  return userCode;
+};
+
+const getAllUsers = async () => {
+  const pool = await poolPromise;
+  const result = await pool.request()
+   .query(`select 
+       user_ID,
+	   user_Code,
+       user_Name,
+	   user_Type_ID,
+	   mobile_Number,
+	   alter_Mobile_number,
+	   email_ID,
+	   active_Flag,
+	   deliveryman_id,
+	   company_Id,
+	   created_Date
+
+FROM user_Master order by user_ID desc`);
+  return result.recordset;
+};
+
+
+const updateUserStatus = async (userId, isActive) => {
+  const pool = await poolPromise;
+  const query = `
+    UPDATE user_Master 
+    SET active_Flag = @isActive 
+    WHERE user_ID = @userId
+  `;
+  
+  await pool.request()
+    .input('userId', sql.Int, userId)
+    .input('isActive', sql.Bit, isActive)
+    .query(query);
+};
+
+const updateUser = async (userId, userData) => {
+  try {
+    const pool = await poolPromise;
+    
+    // Check if email exists for other users
+    const emailCheck = await pool.request()
+      .input('email', sql.NVarChar, userData.email_ID)
+      .input('userId', sql.Int, userId)
+      .query(`
+        SELECT COUNT(*) as count 
+        FROM user_Master 
+        WHERE email_ID = @email 
+        AND user_ID != @userId
+      `);
+
+    if (emailCheck.recordset[0].count > 0) {
+      throw new Error('Email already exists');
+    }
+
+    const query = `
+      UPDATE user_Master
+      SET 
+        user_Name = @user_Name,
+        email_ID = @email_ID,
+        mobile_Number = @mobile_Number,
+        alter_Mobile_number = @alter_Mobile_number,
+        modified_Date = GETDATE()
+      WHERE user_ID = @userId
+    `;
+
+    await pool.request()
+      .input('userId', sql.Int, userId)
+      .input('user_Name', sql.NVarChar, userData.user_Name)
+      .input('email_ID', sql.NVarChar, userData.email_ID)
+      .input('mobile_Number', sql.NVarChar, userData.mobile_Number)
+      .input('alter_Mobile_number', sql.NVarChar, userData.alter_Mobile_number)
+      .query(query);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating user:', error);
+    throw error;
+  }
+};
+
+// 
 // Insert into company_Master and return company_Id
-const addCompany = async (companyName, email, mobileId) => {
+const addCompany = async (companyName, email, mobileId,mobile) => {
    
     const pool = await poolPromise;
   const result = await pool.request()
-    .input('companyName', sql.VarChar, companyName)
+    .input('companyName', sql.VarChar, companyName || "ots2.0")
     .input('email', sql.VarChar, email)
-    .input('mobileId', sql.VarChar, mobileId)
+    .input('mobileId', sql.VarChar, mobileId || mobile)
     .query(`
       INSERT INTO company_Master (company_Name, email, mobile_No)
       OUTPUT inserted.company_Id
@@ -19,20 +121,27 @@ const addCompany = async (companyName, email, mobileId) => {
 };
 
 // Insert into user_Master
-const addUser = async (username, usercode,  company_Id,mobileId,email) => {
-    const pool = await poolPromise;
-    const userTypeId = 2;
+const addUser = async (username,  company_Id, mobileId, email, name, role, mobile) => {
+  const pool = await poolPromise;
+  
+  // Generate unique user code if not provided
+  const finalUserCode =  await generateUniqueUserCode(role === 1 ? 'ADM' : 
+                                                                role === 2 ? 'OWN' : 
+                                                                role === 3 ? 'DEL' : 'CUS');
+  
   await pool.request()
-    .input('username', sql.VarChar, username)
-    .input('usercode', sql.VarChar, usercode)
-    .input('usertypeId', sql.Numeric, userTypeId)
-    .input('company_Id',sql.Numeric, company_Id)
+    .input('username', sql.VarChar, username || name)
+    .input('usercode', sql.VarChar, finalUserCode)
+    .input('usertypeId', sql.Numeric, role)
+    .input('company_Id', sql.Numeric, company_Id)
     .input('email', sql.VarChar, email)
-    .input('mobileId', sql.VarChar, mobileId)
+    .input('mobileId', sql.VarChar, mobileId || mobile)
     .query(`
-      INSERT INTO user_Master (user_Name, user_Code, user_Type_ID, company_Id,email_ID,mobile_Number)
-      VALUES (@username, @usercode, @usertypeId, @company_Id,@email,@mobileId)
+      INSERT INTO user_Master (user_Name, user_Code, user_Type_ID, company_Id, email_ID, mobile_Number)
+      VALUES (@username, @usercode, @usertypeId, @company_Id, @email, @mobileId)
     `);
+    
+  return finalUserCode;
 };
 
 const updateCompanySettings = async (companyId, companyData) => {
@@ -161,11 +270,12 @@ const deleteMenuAccess = async (id) => {
 
 module.exports = { 
   addCompany, 
+  getAllUsers,
   addUser, 
   updateCompanySettings, 
   getCompanySettings,
   createMenuAccess,
   getMenuAccess,
   updateMenuAccess,
-  deleteMenuAccess
+  deleteMenuAccess,updateUser, updateUserStatus,
 };

@@ -17,10 +17,11 @@ const getAllOrderDetails = async () => {
     // `;
     const query=`
 
-SELECT 
+sELECT 
        o.order_id, 
        o.order_date, 
        o.total_price,
+	   o.ordertype,
        o.payment ,
 	   o.orderStatus_Id,
 	    o.orderStatus_Id2,
@@ -50,6 +51,7 @@ GROUP BY
        o.order_id, 
        o.order_date, 
        o.total_price, 
+	     o.ordertype,
         o.payment ,
 		 o.orderStatus_Id,
 		  o.orderStatus_Id2,

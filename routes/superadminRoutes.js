@@ -2,10 +2,20 @@
 const express = require('express');
 const adminController = require('../controllers/superadmin/adminController');
 const upload = require('../middleware/uploadMiddleware');
+const { route } = require('./admin');
 const router = express.Router();
+
+
+
 
 // Route to handle the creation of an admin
 router.post('/create-admin', adminController.createAdmin);
+router.get('/get-all-user', adminController.getAllUsers );
+// ... existing routes ...
+router.put('/update-user-status/:userId', adminController.updateUserStatus);
+// Add this new route
+router.put('/update-user/:userId', adminController.updateUser);
+// ... existing routes ...
 
 // New routes for company settings
 router.put('/company-settings', upload, adminController.updateCompanySettings);

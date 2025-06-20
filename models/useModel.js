@@ -82,8 +82,8 @@ const addUserAndAddress = async (user) => {
       
       const userResult = await transaction.request()
           .input('name', sql.NVarChar, user.name)
-          .input('mobileNumber', sql.NVarChar, user.phoneNumber)
-          .input('alterMobileNumber', sql.NVarChar, user.alternativePhoneNumber)
+          .input('mobileNumber', sql.NVarChar, user.phoneNumber || user.mobile)
+          .input('alterMobileNumber', sql.NVarChar, user.alternativePhoneNumber || user.alternativePhone)
           .input('email', sql.NVarChar, user.email)
           .input('userTypeId', sql.Numeric, userTypeId)
           .input('activeFlag', sql.Bit,active_Flag)
@@ -101,7 +101,7 @@ const addUserAndAddress = async (user) => {
         const latitude =user.location.latitude || 0;
          const addresss=user.address || "address-null"
       // Insert address details into user_Address
-      if (user.city ) {
+      if (user.pinCode ) {
       const addressInsertQuery = `
           INSERT INTO [user_Address] 
           ([user_ID], [longitude], [lattitude], [address], [state_Id], [city_Id], 
@@ -553,7 +553,21 @@ const disableUser = async (userCode) => {
   }
 };
 
+const updateUserStatus = async (userId, isActive) => {
+  const pool = await poolPromise;
+  const query = `
+    UPDATE user_Master 
+    SET active_Flag = @isActive 
+    WHERE user_ID = @userId
+  `;
+  
+  await pool.request()
+    .input('userId', sql.Int, userId)
+    .input('isActive', sql.Bit, isActive)
+    .query(query);
+};
+
 module.exports = { getUsers, addUserAndAddress, findUserByEmail,getUserById, addToWishlist,
     removeFromWishlist,
     getWishlistItems,createOrder,createOrderItems,addAddress,getAddressByUserId,updateAddress,getAllOrders,
-    getOrderById,updateOrderStatus,getOrdersByUser,updateAddress,disableUser};
+    getOrderById,updateOrderStatus,getOrdersByUser,updateAddress,disableUser, updateUserStatus};
